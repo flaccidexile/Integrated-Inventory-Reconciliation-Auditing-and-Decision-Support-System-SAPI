@@ -28,7 +28,11 @@ export function DataTable<T>({ columns, rows, rowKey, caption, empty }: DataTabl
   if (rows.length === 0 && empty) return <>{empty}</>;
 
   return (
-    <div className="overflow-x-auto">
+    // `relative` anchors the screen-reader `<caption>` below to this table.
+    // `sr-only` is `position: absolute`, so without a positioned ancestor here
+    // the caption resolves against the initial containing block, escapes the
+    // surrounding scroll container and stretches the page itself.
+    <div className="relative overflow-x-auto">
       <table className="w-full text-sm">
         {caption ? <caption className="sr-only">{caption}</caption> : null}
         <thead>

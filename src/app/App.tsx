@@ -93,9 +93,20 @@ function AppShell() {
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#f0f2f5] print:overflow-visible print:bg-white">
         <AppHeader />
 
+        {/*
+          `relative` makes this element the containing block for every
+          absolutely positioned descendant that has no positioned ancestor of
+          its own — in practice the `sr-only` captions and labels the pages
+          render. Without it those elements resolve against the initial
+          containing block, escape this scroll container's clip, and land at
+          their static document position — which grows the *document* past the
+          viewport and gives the app a second, page-level scrollbar next to
+          this one. `main` is the only scroll container in the shell, so it
+          must own those positions.
+        */}
         <main
           id="main-content"
-          className="flex-1 overflow-y-auto px-6 py-5 print:overflow-visible print:p-0"
+          className="relative flex-1 overflow-y-auto px-6 py-5 print:overflow-visible print:p-0"
         >
           {/*
             Scoped to the routed content, so a failing module leaves the sidebar
