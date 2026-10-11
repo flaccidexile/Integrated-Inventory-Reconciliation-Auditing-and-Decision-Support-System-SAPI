@@ -1,0 +1,32 @@
+{
+  "name": "sapi-server",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Express API for the SAPI Inventory Reconciliation, Auditing & Decision Support System",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
+    "seed:sql": "tsx scripts/generate-seed.mts",
+    "seed:push": "tsx scripts/push-seed.mts",
+    "setup:sql": "tsx scripts/build-setup.mts",
+    "provision": "tsx scripts/provision-users.mts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.47.10",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.0"
+  }
+}

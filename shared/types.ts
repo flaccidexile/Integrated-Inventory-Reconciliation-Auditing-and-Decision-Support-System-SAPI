@@ -1,0 +1,328 @@
+/**
+ * Domain model for the Southwind Automotive Parts Inc. (SAPI)
+ * Integrated Inventory Reconciliation, Auditing & Decision Support System.
+ *
+ * This file is the single definition of the domain shape. The React client
+ * re-exports it from `src/app/types.ts` and the Express API imports it
+ * directly, so the two tiers can never drift apart.
+ */
+
+export type Trend = "up" | "down" | "neutral";
+
+export type PartCategory =
+  | "Engine Parts"
+  | "Brakes"
+  | "Electrical"
+  | "Suspension"
+  | "Filters"
+  | "Exhaust"
+  | "Drivetrain"
+  | "Body Parts";
+
+/** Inventory classification used to weight audit priority. */
+export type AbcClass = "A" | "B" | "C";
+
+export type StockStatus = "In Stock" | "Low Stock" | "Out of Stock";
+
+/* ── The three roles this system serves ───────────────────────────────────── */
+
+export type UserRole = "management" | "warehouse" | "sales";
+
+/** Display metadata for each role, shared by the login screen and the sidebar. */
+export const ROLE_LABELS: Record<UserRole, string> = {
+  management: "Management",
+  warehouse: "Warehouse Staff",
+  sales: "Sales Staff",
+};
+
+export const ROLE_BLURBS: Record<UserRole, string> = {
+  management: "Full oversight — approves discrepancies and reads every report.",
+  warehouse: "Encodes physical counts, prints blind sheets and moves stock.",
+  sales: "Checks stock availability across all branches and requests transfers.",
+};
+
+export interface Branch {
+  id: string;
+  name: string;
+  shortName: string;
+  region: string;
+  manager: string;
+  address: string;
+  phone: string;
+  isMain: boolean;
+}
+
+export interface Part {
+  sku: string;
+  name: string;
+  category: PartCategory;
+  brand: string;
+  unitCost: number;
+  reorderPoint: number;
+  abcClass: AbcClass;
+}
+
+/** Per-branch stock position for a single part. */
+export interface StockRecord {
+  sku: string;
+  branchId: string;
+  onHand: number;
+  binLocation: string;
+  /** Days since the part last moved out (sale or transfer). */
+  daysSinceMovement: number;
+  /** Days since this bin was last physically counted. */
+  daysSinceCount: number;
+  /** Days since a transfer touched this record, or null if never. */
+  daysSinceTransfer: number | null;
+}
+
+/** A stock record joined with its part, branch and derived figures. */
+export interface BranchStock extends StockRecord {
+  part: Part;
+  branch: Branch;
+  status: StockStatus;
+  shortfall: number;
+  value: number;
+  isDeadStock: boolean;
+}
+
+/* ── Objective 1 — Targeted Cycle Counting ─────────────────────────────── */
+
+export type CyclePriority = "Critical" | "High" | "Medium" | "Low";
+export type CycleTaskStatus = "Pending" | "Sheet Printed" | "Counted" | "Reconciled";
+
+export interface CycleTask {
+  id: string;
+  sku: string;
+  branchId: string;
+  binLocation: string;
+  priority: CyclePriority;
+  score: number;
+  daysSinceCount: number;
+  daysSinceTransfer: number | null;
+  abcClass: AbcClass;
+  reason: string;
+  status: CycleTaskStatus;
+  assignedTo: string;
+}
+
+/* ── Objective 2 — Discrepancy Approval Workflow ───────────────────────── */
+
+export type DiscrepancyStatus = "Locked" | "Under Review" | "Approved" | "Rejected";
+
+/**
+ * Declared as a const tuple rather than a bare union so the same definition can
+ * drive both the TypeScript type and the runtime validator in the API
+ * (`z.enum(ROOT_CAUSE_VALUES)`), with no chance of the two listing different
+ * causes.
+ */
+export const ROOT_CAUSE_VALUES = [
+  "Miscount",
+  "Unrecorded Transfer",
+  "Damaged Goods",
+  "Misplaced Item",
+  "Supplier Short-Ship",
+  "Encoding Error",
+  "Theft / Shrinkage",
+] as const;
+
+export type RootCause = (typeof ROOT_CAUSE_VALUES)[number];
+
+export interface Discrepancy {
+  id: string;
+  sku: string;
+  branchId: string;
+  binLocation: string;
+  systemQty: number;
+  countedQty: number;
+  variance: number;
+  unitCost: number;
+  varianceValue: number;
+  rootCause: RootCause | null;
+  status: DiscrepancyStatus;
+  raisedBy: string;
+  raisedAt: string;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  notes: string;
+}
+
+/* ── Objective 4 — Automated Dead-Stock Matchmaker ─────────────────────── */
+
+export interface MatchSuggestion {
+  sku: string;
+  partName: string;
+  fromBranchId: string;
+  toBranchId: string;
+  /** Surplus sitting idle at the source branch. */
+  availableQty: number;
+  /** Units the target branch is short of its reorder point. */
+  shortfall: number;
+  suggestedQty: number;
+  unitCost: number;
+  recoveryValue: number;
+  daysIdle: number;
+  matchScore: number;
+}
+
+/* ── Supply chain ──────────────────────────────────────────────────────── */
+
+export type TransferStatus = "Pending" | "Approved" | "In Transit" | "Completed" | "Rejected";
+
+export interface Transfer {
+  id: string;
+  sku: string;
+  partName: string;
+  fromBranchId: string;
+  toBranchId: string;
+  qty: number;
+  requestedBy: string;
+  date: string;
+  status: TransferStatus;
+  /** True when the transfer was generated by the dead-stock matchmaker. */
+  autoSuggested: boolean;
+}
+
+export type PoStatus =
+  | "Draft"
+  | "Submitted"
+  | "Confirmed"
+  | "Partially Received"
+  | "Completed"
+  | "Cancelled";
+
+export interface PurchaseOrder {
+  id: string;
+  supplier: string;
+  items: number;
+  total: number;
+  orderDate: string;
+  deliveryDate: string;
+  status: PoStatus;
+}
+
+export interface Supplier {
+  id: number;
+  name: string;
+  categories: string;
+  phone: string;
+  email: string;
+  leadTimeDays: number;
+  rating: number;
+  activePOs: number;
+  status: "Active" | "Inactive";
+}
+
+export interface AppUser {
+  id: string;
+  name: string;
+  role: UserRole;
+  branchId: string;
+  email: string;
+  status: "Active" | "Suspended";
+}
+
+/* ── Objective 3 — Discrepancy analytics ───────────────────────────────── */
+
+export interface DiscrepancyByMonth {
+  month: string;
+  /** Tickets raised during the month. */
+  opened: number;
+  /** Tickets *decided* during the month — keyed on the review date. */
+  resolved: number;
+  /** Tickets still open at the end of the month. */
+  backlog: number;
+  /** Variance value of the tickets raised during the month. */
+  cost: number;
+}
+
+export interface DiscrepancyByBranch {
+  branchId: string;
+  shortName: string;
+  discrepancies: number;
+  cost: number;
+  accuracyRate: number;
+}
+
+export interface DiscrepancyByCause {
+  cause: RootCause;
+  count: number;
+  cost: number;
+}
+
+/* ── Aggregate payloads returned by the API ────────────────────────────── */
+
+export interface DashboardKpis {
+  totalPositions: number;
+  totalUnits: number;
+  totalValue: number;
+  deadStockCount: number;
+  deadStockValue: number;
+  lowStockCount: number;
+  lowStockValue: number;
+  outOfStockCount: number;
+  countAccuracy: number;
+  stockHealth: number;
+  openDiscrepancies: number;
+  lockedValue: number;
+  totalVarianceCost: number;
+  resolvedThisMonth: number;
+  pendingTransfers: number;
+  inTransitTransfers: number;
+  openPos: number;
+  poSpendTotal: number;
+  skuCount: number;
+  branchCount: number;
+}
+
+export interface DiscrepancyAnalytics {
+  byMonth: DiscrepancyByMonth[];
+  byBranch: DiscrepancyByBranch[];
+  byCause: DiscrepancyByCause[];
+}
+
+export interface CycleSummary {
+  totalTasks: number;
+  pending: number;
+  sheetPrinted: number;
+  counted: number;
+  reconciled: number;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  completionRate: number;
+}
+
+export interface MatchSummary {
+  suggestions: number;
+  partsMatched: number;
+  unitsReallocated: number;
+  capitalRecovered: number;
+  procurementAvoided: number;
+}
+
+/** Organisation-level configuration, backing the Settings screen. */
+export interface CompanyInfo {
+  name: string;
+  shortName: string;
+  abbr: string;
+  system: string;
+  hq: string;
+  phone: string;
+  email: string;
+  website: string;
+  branchCount: number;
+  noPhonePolicy: string;
+}
+
+/** The signed-in user, as returned by `GET /api/me`. */
+export interface SessionProfile {
+  id: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  branchId: string | null;
+  jobTitle: string | null;
+  status: "Active" | "Suspended";
+}

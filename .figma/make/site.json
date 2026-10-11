@@ -1,0 +1,12 @@
+{
+  "title": "SAPI — Inventory Reconciliation System",
+  "description": "Southwind Automotive Parts Inc. (SAPI) Integrated Inventory Reconciliation, Auditing & Decision Support System — targeted cycle counting, a locked discrepancy approval workflow, discrepancy analytics and automated dead-stock matching across 8 branches.",
+  "language": "en",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
